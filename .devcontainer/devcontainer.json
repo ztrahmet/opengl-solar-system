@@ -1,0 +1,16 @@
+{
+  "name": "C++ OpenGL Solar System",
+  "image": "mcr.microsoft.com/devcontainers/cpp:latest",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools"
+      ]
+    }
+  },
+
+  // Install OpenGL libraries after the container is created
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libglfw3-dev libglm-dev libgl1-mesa-dev"
+}
