@@ -10,15 +10,19 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
 
-# Define the executable target and include ALL source files
+# Define the executable target
 add_executable(solar-system
   src/main.cpp
   src/glad.c
   src/shader.cpp
   src/camera.cpp
+  src/planet.cpp
+  src/ini.c       
+  src/config.cpp  
+  src/stb_image.cpp # <-- Ensure this line is present
 )
 
-# Add include directory so the compiler can find shader.h and camera.h
+# Add include directory
 target_include_directories(solar-system PUBLIC 
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -27,14 +31,25 @@ target_include_directories(solar-system PUBLIC
 target_link_libraries(solar-system PRIVATE
   OpenGL::GL
   glfw
-  glm::glm 
+  glm::glm
+  Threads::Threads
 )
 
-# --- NEW: Copy assets to the build directory ---
-# This command runs after the build is complete, ensuring the shaders
-# are next to the executable.
+# --- Asset Copying ---
 add_custom_command(TARGET solar-system POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/shaders" "${CMAKE_BINARY_DIR}/shaders"
-    COMMENT "Copying shaders to build directory"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_CURRENT_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
+  COMMENT "Copying shaders to build directory"
+)
+
+add_custom_command(TARGET solar-system POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_CURRENT_SOURCE_DIR}/textures ${CMAKE_CURRENT_BINARY_DIR}/textures
+  COMMENT "Copying textures to build directory"
+)
+
+add_custom_command(TARGET solar-system POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${CMAKE_CURRENT_SOURCE_DIR}/config.ini ${CMAKE_CURRENT_BINARY_DIR}/config.ini
+  COMMENT "Copying config.ini to build directory"
 )
