@@ -1,3 +1,10 @@
+/**
+ * @file main.cpp
+ * @brief Main application entry point for the OpenGL Solar System simulation.
+ * Initializes GLFW, GLAD, ImGui, loads the scenario, textures, shaders,
+ * and runs the main render loop. Handles input processing and updates.
+ */
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -20,8 +27,8 @@
 #include <string>    // For using std::string
 #include <vector>    // For std::vector (used for cubemap faces)
 #include <memory>    // For std::unique_ptr (used in Scenario)
-#include <thread>    // For std::this_thread::sleep_for (used in FPS capping, though currently disabled)
-#include <chrono>    // For std::chrono::milliseconds (used with sleep_for)
+#include <thread>    // For std::this_thread::sleep_for
+#include <chrono>    // For std::chrono::milliseconds
 #include <optional>  // For std::optional (used for parentName in CelestialBody)
 #include <map>       // For std::map (used to look up bodies by name)
 #include <algorithm> // For std::clamp, std::max, std::find, std::distance
@@ -381,23 +388,36 @@ int main()
             // Apply rotation
             rotation = glm::rotate(glm::mat4(1.0f), accumulatedSimTime * body.rotationSpeed, glm::normalize(body.rotationAxis));
 
-            // Apply parent transformation if applicable (for hierarchy)
-            glm::mat4 parentModelMatrix = glm::mat4(1.0f);
+            // --- Hierarchical Transformation ---
+            // Calculate the body's final world position and build its model matrix
+            glm::vec3 parentPosition = glm::vec3(0.0f);
+            // If the body has a parent...
             if (body.parentName)
             {
+                // ...find the parent's current world matrix
                 auto it = bodyMap.find(*body.parentName);
                 if (it != bodyMap.end())
                 {
-                    parentModelMatrix = it->second->currentModelMatrix; // Get parent's current world matrix
+                    // Extract only the translation (position) part of the parent's matrix
+                    // This prevents the parent's scale/rotation from affecting the child's orbital distance
+                    parentPosition = glm::vec3(it->second->currentModelMatrix[3]);
                 }
             }
 
-            // Combine transformations: Parent -> Orbit -> Rotation -> Scale
-            model = parentModelMatrix * orbitTranslation * rotation;
-            model = glm::scale(model, glm::vec3(body.radius)); // Apply scaling last
+            // Calculate the final world position: Parent's Position + Orbital Offset
+            glm::vec3 finalPosition = parentPosition + glm::vec3(orbitTranslation * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
-            // Store the final world matrix for potential children or camera locking
+            // Construct the final model matrix for this body:
+            // 1. Translate to the final world position
+            // 2. Apply its own rotation around its center
+            // 3. Apply its own scale
+            model = glm::translate(glm::mat4(1.0f), finalPosition);
+            model = model * rotation;                          // Apply self-rotation after translation
+            model = glm::scale(model, glm::vec3(body.radius)); // Apply self-scaling last
+
+            // Store the calculated world matrix for use by children or camera locking
             body.currentModelMatrix = model;
+            // --- End Hierarchical Transformation ---
 
             // Select the appropriate shader (emissive or lighting)
             Shader &currentShader = body.isEmissive ? emissiveShader : lightingShader;
