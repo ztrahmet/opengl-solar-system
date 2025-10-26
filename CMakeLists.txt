@@ -17,13 +17,14 @@ add_executable(solar-system
   src/shader.cpp
   src/camera.cpp
   src/planet.cpp
-  src/ini.c       
-  src/config.cpp  
-  src/stb_image.cpp # <-- Ensure this line is present
+  src/ini.c
+  src/config.cpp
+  src/stb_image.cpp
+  src/scenario.cpp  # <-- ADDED
 )
 
 # Add include directory
-target_include_directories(solar-system PUBLIC 
+target_include_directories(solar-system PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
@@ -35,19 +36,17 @@ target_link_libraries(solar-system PRIVATE
   Threads::Threads
 )
 
-# --- Asset Copying ---
+# --- Asset Copying --- (Keep existing copy commands)
 add_custom_command(TARGET solar-system POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
   COMMENT "Copying shaders to build directory"
 )
-
 add_custom_command(TARGET solar-system POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   ${CMAKE_CURRENT_SOURCE_DIR}/textures ${CMAKE_CURRENT_BINARY_DIR}/textures
   COMMENT "Copying textures to build directory"
 )
-
 add_custom_command(TARGET solar-system POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy
   ${CMAKE_CURRENT_SOURCE_DIR}/config.ini ${CMAKE_CURRENT_BINARY_DIR}/config.ini

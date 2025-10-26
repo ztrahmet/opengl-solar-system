@@ -3,10 +3,11 @@ out vec4 FragColor;
 
 in vec2 TexCoord;
 
-// This is the texture sampler
 uniform sampler2D ourTexture;
 
-void main() {
-    // Sample the texture at the given texture coordinate
+void main()
+{
+    // The sun is emissive, so we just sample its texture
+    // and don't apply any lighting.
     FragColor = texture(ourTexture, TexCoord);
 }
