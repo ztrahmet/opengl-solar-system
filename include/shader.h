@@ -3,6 +3,7 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp> // Include for glm::value_ptr
 
 #include <string>
 #include <fstream>
@@ -11,28 +12,18 @@
 
 class Shader {
 public:
-    // The program ID
     unsigned int ID;
-
-    // Constructor reads and builds the shader
     Shader(const char* vertexPath, const char* fragmentPath);
-
-    // Use/activate the shader
     void use();
-
-    // Utility uniform functions
     void setBool(const std::string &name, bool value) const;
     void setInt(const std::string &name, int value) const;
     void setFloat(const std::string &name, float value) const;
-    // --- ADDED ---
-    void setVec3(const std::string &name, const glm::vec3 &value) const;
-    void setVec3(const std::string &name, float x, float y, float z) const;
-    // -------------
+    void setVec3(const std::string &name, const glm::vec3 &value) const; // Keep this
+    void setVec3(const std::string &name, float x, float y, float z) const; // Keep this
+    void setMat3(const std::string &name, const glm::mat3 &mat) const; // <-- ADDED
     void setMat4(const std::string &name, const glm::mat4 &mat) const;
 
-
 private:
-    // Utility function for checking shader compilation/linking errors.
     void checkCompileErrors(unsigned int shader, std::string type);
 };
 
