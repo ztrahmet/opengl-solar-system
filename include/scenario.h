@@ -3,69 +3,62 @@
 
 #include <string>
 #include <vector>
+#include <optional>
+#include <memory> // Needed for unique_ptr
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp> // Include for matrix functions
-#include "shader.h"
-#include <memory>
-#include "planet.h"
-#include <optional> // For optional parent name
+#include "planet.h" // Full definition needed for unique_ptr member
 
-// Represents a single celestial body (Sun, Planet, Moon)
+// Forward declaration (if needed elsewhere, though including planet.h is better here)
+// class Planet;
+
+// Structure to hold properties of a celestial body
 struct CelestialBody {
     std::string name;
-    float radius;
+    float radius = 1.0f;
     std::string texturePath;
-    // glm::vec3 initialPosition; // Replaced by orbital parameters
-    bool isEmissive;
+    unsigned int textureID = 0; // OpenGL texture ID, loaded later
+    bool isEmissive = false;
+    std::optional<std::string> parentName = std::nullopt; // Name of the body it orbits, if any
+    float orbitRadius = 0.0f;
+    float orbitSpeed = 0.0f;
+    float rotationSpeed = 0.0f;
+    glm::vec3 rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    std::unique_ptr<Planet> mesh = nullptr; // The sphere mesh (using unique_ptr for ownership)
+    glm::mat4 currentModelMatrix = glm::mat4(1.0f); // Current matrix after transformations
 
-    // --- Animation Properties ---
-    float orbitRadius;        // Distance from the body it orbits (0 for Sun)
-    float orbitSpeed;         // Speed of orbit (radians per second, can be negative for direction)
-    float rotationSpeed;      // Speed of rotation on axis (radians per second)
-    glm::vec3 rotationAxis;     // Axis of rotation (e.g., glm::vec3(0.0f, 1.0f, 0.0f))
-    std::optional<std::string> parentName; // Name of the body this one orbits, if any
-
-    // --- Data loaded/used at runtime ---
-    unsigned int textureID = 0;
-    std::unique_ptr<Planet> mesh = nullptr;
-    glm::mat4 currentModelMatrix = glm::mat4(1.0f); // Store the calculated matrix each frame
-
-    // Constructor updated for animation
+    // Constructor (example - adjust as needed)
     CelestialBody(std::string n, float r, std::string tex, bool emissive,
-                  float orbRad, float orbSpd, float rotSpd, glm::vec3 rotAx,
-                  std::optional<std::string> parent = std::nullopt) // Use std::nullopt for no parent
+                  float orbRad, float orbSpd, float rotSpd, glm::vec3 rotAxis,
+                  std::optional<std::string> parent = std::nullopt)
         : name(std::move(n)), radius(r), texturePath(std::move(tex)), isEmissive(emissive),
-          orbitRadius(orbRad), orbitSpeed(orbSpd), rotationSpeed(rotSpd), rotationAxis(rotAx),
-          parentName(std::move(parent)) {}
+          parentName(std::move(parent)), orbitRadius(orbRad), orbitSpeed(orbSpd),
+          rotationSpeed(rotSpd), rotationAxis(rotAxis) {}
 
-    ~CelestialBody(); // Still defined in scenario.cpp
 
-    CelestialBody(CelestialBody&&) = default;
-    CelestialBody& operator=(CelestialBody&&) = default;
-    CelestialBody(const CelestialBody&) = delete;
-    CelestialBody& operator=(const CelestialBody&) = delete;
+    // Explicitly default the default constructor
+    CelestialBody() = default;
+
+    // Destructor MUST be defined out-of-line in the .cpp file
+    // where Planet is fully defined if using unique_ptr<Planet>.
+    ~CelestialBody();
+
+    // Rule of 5/3: Since we have unique_ptr, manage copy/move operations
+    CelestialBody(const CelestialBody&) = delete; // No copying
+    CelestialBody& operator=(const CelestialBody&) = delete; // No copying
+    CelestialBody(CelestialBody&&) noexcept = default; // Default move is fine
+    CelestialBody& operator=(CelestialBody&&) noexcept = default; // Default move is fine
+
 };
 
-// Represents the entire scene/scenario
+// Structure to hold the entire scene definition
 struct Scenario {
     std::vector<CelestialBody> bodies;
-    glm::vec3 lightPos = glm::vec3(0.0f);
-    glm::vec3 lightColor = glm::vec3(1.0f);
-    glm::vec3 initialCameraPos = glm::vec3(0.0f, 5.0f, 20.0f);
-
-     // Helper function to find a body by name (needed for hierarchy)
-     // Returns nullptr if not found
-    CelestialBody* findBody(const std::string& name) {
-        for (auto& body : bodies) {
-            if (body.name == name) {
-                return &body;
-            }
-        }
-        return nullptr;
-    }
+    glm::vec3 initialCameraPos = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 };
 
-// Function declaration
+// Function to load a specific scenario
 Scenario loadScenario_SolarSystemBasic();
 
 #endif // SCENARIO_H

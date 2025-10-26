@@ -1,95 +1,72 @@
 #include "scenario.h"
-#include "planet.h"
+#include "planet.h" // Needed for unique_ptr<Planet>
+#include <memory>  // Needed for unique_ptr
 #include <vector>
-#include <string>
-#include <memory>
-#include <optional> // Include optional header
 
-// Definition for CelestialBody destructor.
+// Explicitly define CelestialBody destructor here where Planet is fully defined
 CelestialBody::~CelestialBody() = default;
 
-// Defines the initial state of our basic solar system
+
 Scenario loadScenario_SolarSystemBasic() {
     Scenario scene;
 
-    // --- Define Celestial Bodies ---
-    // Using slightly more realistic relative sizes and compressed distances.
-    // Speeds are arbitrary for visual effect.
+    scene.initialCameraPos = glm::vec3(0.0f, 2.0f, 15.0f);
+    scene.lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    scene.lightColor = glm::vec3(1.0f, 1.0f, 0.9f);
 
-    // Sun (Emissive Light Source, Center of Orbit)
-    float sunRadius = 2.0f;
-    scene.bodies.emplace_back(
-        "Sun",                      // Name
-        sunRadius,                  // Radius
-        "textures/sun.jpg",         // Texture Path
-        true,                       // Is Emissive
-        0.0f,                       // Orbit Radius (orbits nothing)
-        0.0f,                       // Orbit Speed
-        0.05f,                      // Rotation Speed (slow)
-        glm::vec3(0.0f, 1.0f, 0.0f) // Rotation Axis (Y-axis)
-        // No parent
-    );
-    scene.lightPos = glm::vec3(0.0f, 0.0f, 0.0f); // Sun is the light source
+    // --- Sun ---
+    CelestialBody sun;
+    sun.name = "Sun";
+    sun.radius = 2.0f;
+    sun.texturePath = "textures/sun.jpg";
+    sun.isEmissive = true;
+    sun.orbitRadius = 0.0f;
+    sun.orbitSpeed = 0.0f;
+    sun.rotationSpeed = 0.05f;
+    sun.rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    sun.mesh = std::make_unique<Planet>(1.0f, 64, 64);
+    scene.bodies.push_back(std::move(sun));
 
-    // Earth
-    float earthRadius = 0.5f;
-    float earthOrbitRadius = 10.0f;
-    float earthOrbitSpeed = 0.2f;
-    float earthRotationSpeed = 1.0f;
-    scene.bodies.emplace_back(
-        "Earth",                    // Name
-        earthRadius,                // Radius
-        "textures/earth.jpg",       // Texture Path
-        false,                      // Is Not Emissive
-        earthOrbitRadius,           // Orbit Radius
-        earthOrbitSpeed,            // Orbit Speed
-        earthRotationSpeed,         // Rotation Speed
-        glm::vec3(0.0f, 1.0f, 0.0f), // Rotation Axis
-        "Sun"                       // Parent
-    );
+    // --- Earth ---
+    CelestialBody earth;
+    earth.name = "Earth";
+    earth.radius = 0.5f;
+    earth.texturePath = "textures/earth.jpg";
+    earth.isEmissive = false;
+    earth.orbitRadius = 10.0f;
+    earth.orbitSpeed = 0.2f;
+    earth.rotationSpeed = 0.5f;
+    earth.rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    earth.mesh = std::make_unique<Planet>(1.0f, 48, 48);
+    scene.bodies.push_back(std::move(earth));
 
-    // Mars
-    float marsRadius = 0.3f; // Roughly half of Earth's radius
-    float marsOrbitRadius = 15.0f; // Further out than Earth
-    float marsOrbitSpeed = 0.15f; // Slower orbit than Earth
-    float marsRotationSpeed = 0.9f; // Similar rotation speed to Earth
-    scene.bodies.emplace_back(
-        "Mars",                     // Name
-        marsRadius,                 // Radius
-        "textures/mars.jpg",        // Texture Path
-        false,                      // Is Not Emissive
-        marsOrbitRadius,            // Orbit Radius
-        marsOrbitSpeed,             // Orbit Speed
-        marsRotationSpeed,          // Rotation Speed
-        glm::vec3(0.0f, 1.0f, 0.0f), // Rotation Axis
-        "Sun"                       // Parent
-    );
+    // --- Moon ---
+    CelestialBody moon;
+    moon.name = "Moon";
+    moon.radius = 0.15f;
+    moon.texturePath = "textures/moon.jpg";
+    moon.isEmissive = false;
+    moon.parentName = "Earth";
+    // Orbit radius = Earth radius + Moon radius + clearance
+    moon.orbitRadius = scene.bodies.back().radius + moon.radius + 1.0f; // Approx 0.5 + 0.15 + 1.0 = 1.65
+    moon.orbitSpeed = 2.0f;
+    moon.rotationSpeed = 0.3f;
+    moon.rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    moon.mesh = std::make_unique<Planet>(1.0f, 32, 32);
+    scene.bodies.push_back(std::move(moon));
 
-     // Moon (Orbits Earth)
-    float moonRadius = 0.15f; // Smaller than Earth
-    float moonOrbitRadius = 1.5f; // Orbit radius around Earth
-    float moonOrbitSpeed = 1.5f; // Orbits Earth relatively quickly
-    float moonRotationSpeed = 0.0f; // Tidally locked (or very slow rotation)
-    scene.bodies.emplace_back(
-        "Moon",                     // Name
-        moonRadius,                 // Radius
-        "textures/moon.jpg",        // Texture Path
-        false,                      // Is Not Emissive
-        moonOrbitRadius,            // Orbit Radius (around Earth)
-        moonOrbitSpeed,             // Orbit Speed (around Earth)
-        moonRotationSpeed,          // Rotation Speed
-        glm::vec3(0.0f, 1.0f, 0.0f), // Rotation Axis
-        "Earth"                     // Parent is Earth
-    );
-
-
-    // --- Set Initial Camera Position ---
-    scene.initialCameraPos = glm::vec3(0.0f, 5.0f, 20.0f);
-
-    // --- Load Meshes ---
-    for (auto& body : scene.bodies) {
-        body.mesh = std::make_unique<Planet>(body.radius, 64, 64);
-    }
+    // --- Mars ---
+    CelestialBody mars;
+    mars.name = "Mars";
+    mars.radius = 0.3f;
+    mars.texturePath = "textures/mars.jpg";
+    mars.isEmissive = false;
+    mars.orbitRadius = 15.0f;
+    mars.orbitSpeed = 0.15f;
+    mars.rotationSpeed = 0.45f;
+    mars.rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    mars.mesh = std::make_unique<Planet>(1.0f, 48, 48);
+    scene.bodies.push_back(std::move(mars));
 
     return scene;
 }

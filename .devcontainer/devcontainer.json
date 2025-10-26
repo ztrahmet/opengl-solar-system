@@ -11,6 +11,6 @@
     }
   },
 
-  // Install OpenGL libraries after the container is created
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libglfw3-dev libglm-dev libgl1-mesa-dev"
+  // Install OpenGL libraries AND X11 development library
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libglfw3-dev libglm-dev libgl1-mesa-dev libx11-dev"
 }
