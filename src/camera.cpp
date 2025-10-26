@@ -1,17 +1,35 @@
-#include "camera.h"
+/**
+ * @file camera.cpp
+ * @brief Implements the Camera class methods.
+ */
 
-// constructor with vectors
-Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+#include "camera.h"
+#include <algorithm> // For std::clamp
+
+/**
+ * @brief Constructor using vectors. Initializes camera attributes and calculates initial direction vectors.
+ */
+Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+    : Front(glm::vec3(0.0f, 0.0f, -1.0f)), // Initial front vector
+      MovementSpeed(SPEED),                // Default speed
+      MouseSensitivity(SENSITIVITY),       // Default sensitivity
+      Zoom(ZOOM)                           // Default FOV
 {
     Position = position;
     WorldUp = up;
     Yaw = yaw;
     Pitch = pitch;
-    updateCameraVectors();
+    updateCameraVectors(); // Calculate initial Front, Right, Up vectors from Yaw/Pitch
 }
 
-// constructor with scalar values
-Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+/**
+ * @brief Constructor using scalar values. Initializes camera attributes and calculates initial direction vectors.
+ */
+Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
+    : Front(glm::vec3(0.0f, 0.0f, -1.0f)),
+      MovementSpeed(SPEED),
+      MouseSensitivity(SENSITIVITY),
+      Zoom(ZOOM)
 {
     Position = glm::vec3(posX, posY, posZ);
     WorldUp = glm::vec3(upX, upY, upZ);
@@ -20,68 +38,80 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
     updateCameraVectors();
 }
 
-// returns the view matrix calculated using Euler Angles and the LookAt Matrix
+/**
+ * @brief Calculates and returns the view matrix using glm::lookAt.
+ * This matrix transforms world coordinates to view (camera) coordinates.
+ */
 glm::mat4 Camera::GetViewMatrix()
 {
+    // glm::lookAt requires: camera position, target position, world up vector
     return glm::lookAt(Position, Position + Front, Up);
 }
 
-// processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
+/**
+ * @brief Updates camera position based on keyboard input (WASD).
+ */
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
-    float velocity = MovementSpeed * deltaTime;
+    float velocity = MovementSpeed * deltaTime; // Movement distance for this frame
     if (direction == FORWARD)
         Position += Front * velocity;
     if (direction == BACKWARD)
         Position -= Front * velocity;
     if (direction == LEFT)
-        Position -= Right * velocity;
+        Position -= Right * velocity; // Use the calculated Right vector
     if (direction == RIGHT)
         Position += Right * velocity;
+    // Note: UP/DOWN movement is handled directly in main.cpp using absolute Y axis
 }
 
-// processes input received from a mouse input system. Expects the offset value in both the x and y direction.
+/**
+ * @brief Updates camera orientation (Yaw and Pitch) based on mouse movement offsets.
+ */
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
 {
+    // Scale offsets by sensitivity
     xoffset *= MouseSensitivity;
     yoffset *= MouseSensitivity;
 
-    Yaw   += xoffset;
+    // Add offsets to angles
+    Yaw += xoffset;
     Pitch += yoffset;
 
-    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    // Constrain pitch to avoid flipping upside down
     if (constrainPitch)
     {
-        if (Pitch > 89.0f)
-            Pitch = 89.0f;
-        if (Pitch < -89.0f)
-            Pitch = -89.0f;
+        Pitch = std::clamp(Pitch, -89.0f, 89.0f);
     }
 
-    // update Front, Right and Up Vectors using the updated Euler angles
+    // Update Front, Right, and Up vectors using the modified Euler angles
     updateCameraVectors();
 }
 
-// processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
+/**
+ * @brief Updates the camera's Zoom level (FOV) based on mouse scroll wheel input.
+ */
 void Camera::ProcessMouseScroll(float yoffset)
 {
-    Zoom -= (float)yoffset;
-    if (Zoom < 1.0f)
-        Zoom = 1.0f;
-    if (Zoom > 45.0f)
-        Zoom = 45.0f; 
+    Zoom -= yoffset; // Adjust FOV
+    // Clamp FOV to reasonable limits
+    Zoom = std::clamp(Zoom, 1.0f, 45.0f);
 }
 
-// calculates the front vector from the Camera's (updated) Euler Angles
+/**
+ * @brief Recalculates the Front, Right, and Up direction vectors from the camera's updated Euler Angles (Yaw and Pitch).
+ */
 void Camera::updateCameraVectors()
 {
-    // calculate the new Front vector
+    // Calculate the new Front vector using trigonometry
     glm::vec3 front;
     front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     front.y = sin(glm::radians(Pitch));
     front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     Front = glm::normalize(front);
-    // also re-calculate the Right and Up vector
-    Right = glm::normalize(glm::cross(Front, WorldUp));  // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-    Up    = glm::normalize(glm::cross(Right, Front));
+
+    // Also re-calculate the Right and Up vectors using cross products
+    // Normalize vectors to prevent slowing down movement when looking up/down
+    Right = glm::normalize(glm::cross(Front, WorldUp));
+    Up = glm::normalize(glm::cross(Right, Front));
 }

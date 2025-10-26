@@ -1,57 +1,74 @@
-#include "config.h"
-#include "ini.h"
-#include <iostream>
-#include <string>
-#include <cstring> // For strcmp
+/**
+ * @file config.cpp
+ * @brief Implements the configuration loading function using the inih library.
+ */
 
-// This is the callback function that inih will call for each line in the .ini file
-static int handler(void* user, const char* section, const char* name,
-                   const char* value, int lineno) {
-    
-    // Suppress "unused parameter" warning
-    (void)lineno;
+#include "config.h" // Includes definition of Config struct
+#include "ini.h"    // Includes the inih parser header
+#include <iostream> // For error reporting (std::cerr)
+#include <string>   // For std::string comparison
+#include <cstring>  // For strcmp
 
-    Config* pconfig = (Config*)user;
+/**
+ * @brief Callback function used by the inih parser.
+ * This function is called for each name=value pair found in the INI file.
+ * It updates the Config struct passed via the 'user' pointer.
+ *
+ * @param user Pointer to the Config struct being populated.
+ * @param section The current section name (e.g., "window").
+ * @param name The setting name (e.g., "width").
+ * @param value The setting value as a string (e.g., "1280").
+ * @param lineno The line number in the INI file (unused here).
+ * @return 1 on success (setting recognized), 0 if setting is unknown (but not an error).
+ */
+static int handler(void *user, const char *section, const char *name,
+                   const char *value, int lineno)
+{
 
-    #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-    if (MATCH("window", "width")) {
-        pconfig->width = std::stoi(value);
-    } else if (MATCH("window", "height")) {
-        pconfig->height = std::stoi(value);
-    } else if (MATCH("window", "fullscreen")) {
-        // Correctly interpret "true" as a boolean true, and anything else as false.
-        pconfig->startFullscreen = (std::string(value) == "true");
-    } else {
-        return 0;  // unknown section/name, but not an error
+    // Cast the generic user pointer back to our Config struct type
+    Config *pconfig = (Config *)user;
+
+// Use a macro for easier matching of section and name
+#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
+
+    if (MATCH("window", "width"))
+    {
+        pconfig->width = std::stoi(value); // Convert string value to integer
     }
-    return 1; // return 1 on success
+    else if (MATCH("window", "height"))
+    {
+        pconfig->height = std::stoi(value);
+    }
+    else if (MATCH("window", "fullscreen"))
+    {
+        // Interpret "true" (case-sensitive) as boolean true, otherwise false
+        pconfig->startFullscreen = (strcmp(value, "true") == 0);
+    }
+    else
+    {
+        return 0; // Unknown section or name, but not necessarily an error, just ignore it
+    }
+    return 1; // Return 1 indicates success
 }
 
-// Loads configuration from a .ini file
-Config loadConfig(const std::string& filename) {
-    Config config;
-    
-    // --- Step 1: Set hardcoded default values ---
-    // These values will be used if the config file is not found,
-    // or if a specific setting is missing from the file.
-    config.width = 800;
-    config.height = 600;
-    config.startFullscreen = false; // Default to windowed mode
+/**
+ * @brief Loads configuration from the specified INI file.
+ * Sets default values first, then attempts to parse the file using inih,
+ * which calls the 'handler' function to overwrite defaults with values from the file.
+ */
+Config loadConfig(const std::string &filename)
+{
+    Config config; // Uses default values defined in config.h initially
 
-    // --- Step 2: Attempt to parse the .ini file ---
-    // The 'handler' function will be called for each setting in the file,
-    // overwriting the default values that were set above.
-    if (ini_parse(filename.c_str(), handler, &config) < 0) {
-        // This block only runs if the file 'filename' cannot be opened or read.
-        std::cerr << "Error: Could not load '" << filename << "'." << std::endl;
-        std::cerr << "Using default settings." << std::endl;
-    } else {
-        // This block runs if the file was found and parsed successfully.
-        std::cout << "Successfully loaded configuration from '" << filename << "'" << std::endl;
+    // Attempt to parse the INI file
+    if (ini_parse(filename.c_str(), handler, &config) < 0)
+    {
+        // ini_parse returns < 0 on file open error
+        std::cerr << "Warning: Could not load config file '" << filename << "'. Using default settings." << std::endl;
+        // No action needed, 'config' still holds the default values
     }
+    // Note: ini_parse returns line number of error if parsing fails after opening,
+    // but we currently ignore parsing errors and just use defaults for missing/bad values.
 
-    // --- Step 3: Return the final configuration ---
-    // If the file was loaded, 'config' contains the values from the file.
-    // If loading failed, 'config' still contains the default values from Step 1.
-    return config;
+    return config; // Return the resulting config (either defaults or file values)
 }
